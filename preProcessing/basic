@@ -1,0 +1,27 @@
+import argparse
+import pandas as pd
+
+def load_excel_sheet(file_path, sheet_name):
+    return pd.read_excel(file_path, sheet_name=sheet_name)
+
+def main():
+    # Define command-line arguments
+    parser = argparse.ArgumentParser(description="Process Excel file")
+    parser.add_argument("file_path", help="Path to the Excel file")
+    parser.add_argument("sheet_name", help="Name of the sheet in the Excel file")
+    parser.add_argument("--select_up_to", help="Name of the column up to which to select", default="PM25")
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Load the Excel sheet into a DataFrame
+    data_frame = load_excel_sheet(args.file_path, args.sheet_name)
+
+    # Select columns up to the specified column name
+    data_frame = data_frame.loc[:, :args.select_up_to]
+
+    # Print the resulting DataFrame
+    print(data_frame)
+
+if __name__ == "__main__":
+    main()
