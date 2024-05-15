@@ -1,0 +1,26 @@
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def draw_violin_plots(data_frame_1, data_frame_2=None, **kwargs):
+    if data_frame_2 is None:
+        plt.figure(figsize=(kwargs.get('xvalue', 16), kwargs.get('yvalue', 10)))
+        sns.violinplot(data=data_frame_1.drop(columns=['Hour', 'FuzzyResult', 'MarkAsDot']), **kwargs)
+        plt.title(kwargs.get('title'))
+        plt.xlabel(kwargs.get('xlabel'))
+        plt.ylabel(kwargs.get('ylabel'))
+        plt.xticks(rotation=kwargs.get('rotation', 90), ha='center')
+        plt.show()
+    else:
+        combined_df = pd.DataFrame()
+        for col1, col2 in zip(data_frame_1.columns, data_frame_2.columns):
+            combined_df[col1 + '_before'] = data_frame_1[col1]
+            combined_df[col2 + '_after'] = data_frame_2[col2]
+        draw_violin_plots(combined_df, **kwargs)
+
+def main():
+    # Assuming hourlyDataDF is defined and contains your data
+    draw_violin_plots(hourlyDataDF.iloc[:, 1:18], title="Original and Different Imputated Data Violin Plots", inner="quart", split=False, bw=.2, cut=5, linewidth=0.5)
+
+if __name__ == "__main__":
+    main()
