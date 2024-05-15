@@ -1,0 +1,42 @@
+import numpy as np
+import pandas as pd
+
+def preprocess_data(data_frame, data_column, min_threshold_value=0, max_threshold_value=30):
+    data_frame['PreprocessedData'] = np.where(
+        (data_frame[data_column] > max_threshold_value) | (data_frame[data_column] < min_threshold_value),
+        np.nan, data_frame[data_column])
+    return data_frame
+
+def handle_missing_values(data_frame, preprocessed_data_column):
+    if data_frame[preprocessed_data_column].isnull().sum() > 0:
+        data_frame['MeanImputed'] = data_frame[preprocessed_data_column].fillna(data_frame[preprocessed_data_column].mean())
+        data_frame['MedianImputed'] = data_frame[preprocessed_data_column].fillna(data_frame[preprocessed_data_column].median())
+        data_frame['LinearInterpolated'] = data_frame[preprocessed_data_column].interpolate(method='linear')
+        data_frame["RollingMean"] = data_frame[preprocessed_data_column].fillna(data_frame['PreprocessedData'].rolling(window=5, min_periods=1).mean())
+        data_frame["ForwardFill"] = data_frame[preprocessed_data_column].fillna(method='ffill')
+    return data_frame
+
+def extract_hourly_data(data_frame, timestamp_column, hour_column):
+    data_frame['Hour'] = data_frame[timestamp_column].dt.hour
+    hourly_data_list = [data_frame[data_frame['Hour'] == hour] for hour in range(24)]
+    hourly_data_df = pd.concat(hourly_data_list, ignore_index=True)
+    hourly_data_df = hourly_data_df.sort_values(by=timestamp_column, ascending=True)
+    return hourly_data_df
+
+def main():
+    # Load your DataFrame
+    data_frame = pd.read_excel('20240417_￿￿￿￿￿#3(1).xlsx', sheet_name='GBiot')
+
+    # Preprocess data
+    data_frame = preprocess_data(data_frame, data_column='PM25', min_threshold_value=0, max_threshold_value=30)
+
+    # Handle missing values
+    data_frame = handle_missing_values(data_frame, preprocessed_data_column='PreprocessedData')
+
+    # Extract hourly data
+    hourly_data_df = extract_hourly_data(data_frame, timestamp_column='DT', hour_column='Hour')
+
+    print(hourly_data_df)
+
+if __name__ == "__main__":
+    main()
