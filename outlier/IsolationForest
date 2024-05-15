@@ -1,0 +1,75 @@
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+
+def calculate_hourly_stats(hourly_data_df, hour_column, imputed_data_column):
+    hourly_stats = {}
+    for hour in range(24):
+        data_for_hour = hourly_data_df[hourly_data_df[hour_column] == hour]
+        numeric_data = pd.to_numeric(data_for_hour[imputed_data_column], errors='coerce')
+        if not numeric_data.empty:
+            hourly_stats[hour] = {
+                'min': numeric_data.min(),
+                'Q1': numeric_data.quantile(0.25),
+                'mean': numeric_data.mean(),
+                'Q3': numeric_data.quantile(0.75),
+                'IQR1': (numeric_data.min() + numeric_data.quantile(0.25)) / 2,
+                'IQR2': (numeric_data.quantile(0.75) + numeric_data.max()) / 2,
+                'max': numeric_data.max()
+            }
+        else:
+            hourly_stats[hour] = None
+    return hourly_stats
+
+def perform_fuzzy_logic(hourly_data_df, hourly_stats, hour_column, imputed_data_column):
+    for hour in range(24):
+        data_for_hour = hourly_data_df[hourly_data_df[hour_column] == hour]
+        for index, value in data_for_hour.iterrows():
+            if hourly_stats[hour] is not None:
+                mean = hourly_stats[hour]['mean']
+                Q1 = hourly_stats[hour]['Q1']
+                Q3 = hourly_stats[hour]['Q3']
+                IQR1 = hourly_stats[hour]['IQR1']
+                IQR2 = hourly_stats[hour]['IQR2']
+                minValue = hourly_stats[hour]['min']
+                maxValue = hourly_stats[hour]['max']
+                if value[imputed_data_column] > mean:
+                    if value[imputed_data_column] > Q3:
+                        if value[imputed_data_column] > IQR2:
+                            if value[imputed_data_column] > maxValue:
+                                hourly_data_df.at[index, 'FuzzyResult'] = 1
+                            else:
+                                hourly_data_df.at[index, 'FuzzyResult'] = 0.7
+                        else:
+                            hourly_data_df.at[index, 'FuzzyResult'] = 0.3
+                    else:
+                        hourly_data_df.at[index, 'FuzzyResult'] = 0
+                elif value[imputed_data_column] < mean:
+                    if value[imputed_data_column] < Q1:
+                        if value[imputed_data_column] < IQR1:
+                            if value[imputed_data_column] < minValue:
+                                hourly_data_df.at[index, 'FuzzyResult'] = 1
+                            else:
+                                hourly_data_df.at[index, 'FuzzyResult'] = 0.7
+                        else:
+                            hourly_data_df.at[index, 'FuzzyResult'] = 0.3
+                    else:
+                        hourly_data_df.at[index, 'FuzzyResult'] = 0
+                else:
+                    hourly_data_df.at[index, 'FuzzyResult'] = 0
+            else:
+                hourly_data_df.at[index, 'FuzzyResult'] = None
+    return hourly_data_df
+
+def detect_outliers_with_isolation_forest(hourly_data_df, column_name, contamination=0.3):
+    reshaping_column_data = hourly_data_df[column_name].values.reshape(-1, 1)
+    isolation_forest_results = IsolationForest(contamination=contamination).fit_predict(reshaping_column_data)
+    return isolation_forest_results
+
+def main():
+    # Assuming hourlyDataDF, hourColumn, and ImputedDataColumn are defined and contain your data
+    hourly_stats = calculate_hourly_stats(hourlyDataDF, hour_column='Hour', imputed_data_column='LinearInterpolated')
+    hourly_data_df = perform_fuzzy_logic(hourlyDataDF, hourly_stats, hour_column='Hour', imputed_data_column='LinearInterpolated')
+    isolation_forest_results = detect_outliers_with_isolation_forest(hourlyDataDF, column_name='LinearInterpolated')
+
+if __name__ == "__main__":
+    main()
